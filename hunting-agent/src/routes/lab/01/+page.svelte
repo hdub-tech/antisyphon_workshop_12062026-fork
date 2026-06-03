@@ -543,8 +543,8 @@
         </header>
 
         <!-- ── The journey: vertical execution flow ── -->
-        <section class="cv-section">
-          <h3 class="cv-h3"><span class="cv-num">A</span> The journey of one observation</h3>
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">A</span> The journey of one observation<span class="cv-chev" aria-hidden="true">▸</span></summary>
           <p class="cv-lead">
             Follow a single message from the moment you hit Send. Each step is one
             function call, in order, top to bottom.
@@ -556,11 +556,11 @@
               <div class="flow-body">
                 <div class="flow-top">
                   <span class="flow-title">You press Send</span>
-                  <span class="flow-where">browser · +page.svelte</span>
+                  <span class="flow-where">browser</span>
                 </div>
                 <p>
-                  The page calls <code>handleSubmit()</code>. It freezes the input,
-                  clears the last run, and packages your text into a request.
+                  Your typed observation is bundled into a request. The browser never
+                  talks to the model directly — it asks the server to.
                 </p>
               </div>
             </li>
@@ -661,11 +661,11 @@
               </div>
             </li>
           </ol>
-        </section>
+        </details>
 
         <!-- ── Concept deep-dives ── -->
-        <section class="cv-section">
-          <h3 class="cv-h3"><span class="cv-num">B</span> Four ideas worth understanding</h3>
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">B</span> Four ideas worth understanding<span class="cv-chev" aria-hidden="true">▸</span></summary>
 
           <div class="cv-cards">
             <!-- Wall -->
@@ -768,35 +768,31 @@
               </div>
             </article>
           </div>
-        </section>
+        </details>
 
         <!-- ── File map ── -->
-        <section class="cv-section">
-          <h3 class="cv-h3"><span class="cv-num">C</span> Where each piece lives</h3>
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">C</span> Where each piece lives<span class="cv-chev" aria-hidden="true">▸</span></summary>
           <p class="cv-lead">
             The whole lab is just a handful of small files. Here's the shape of it —
             open any of these afterwards to see the full detail.
           </p>
 
-          <pre class="cv-tree"><code><span class="tr-dir">hunting-agent/</span>
+          <pre class="cv-tree"><code><span class="tr-dir">hunting-agent/src/</span>
 │
-├─ <span class="tr-dir">src/</span>
-│  ├─ <span class="tr-dir">routes/lab/01/</span>
-│  │  ├─ <span class="tr-file">+page.svelte</span>            <span class="tr-cm">← the UI you're looking at (3 tabs)</span>
-│  │  └─ <span class="tr-dir">api/analyze/</span><span class="tr-file">+server.ts</span>  <span class="tr-cm">← server endpoint: prompt, pipeline, event feed</span>
-│  │
-│  ├─ <span class="tr-dir">lib/server/</span>
-│  │  └─ <span class="tr-file">provider.ts</span>             <span class="tr-cm">← reads .env, picks the model</span>
-│  │
-│  └─ <span class="tr-dir">framework/</span>                  <span class="tr-cm">← the reusable engine (shared by every lab)</span>
-│     ├─ <span class="tr-file">state.ts</span>                <span class="tr-cm">← immutable state: addInput / addAnalysis</span>
-│     ├─ <span class="tr-file">types.ts</span>                <span class="tr-cm">← the data shapes (all readonly)</span>
-│     └─ <span class="tr-dir">providers/</span>
-│        ├─ <span class="tr-file">types.ts</span>             <span class="tr-cm">← the LLMProvider contract</span>
-│        └─ <span class="tr-file">gemini.ts</span> <span class="tr-cm">· openai · anthropic · claude-code · codex · mock</span>
+├─ <span class="tr-dir">routes/lab/01/api/analyze/</span>
+│  └─ <span class="tr-file">+server.ts</span>              <span class="tr-cm">← the endpoint that runs the agent: prompt, pipeline, event feed</span>
 │
-└─ <span class="tr-file">.env</span>                         <span class="tr-cm">← your keys + which model to use</span></code></pre>
-        </section>
+├─ <span class="tr-dir">lib/server/</span>
+│  └─ <span class="tr-file">provider.ts</span>             <span class="tr-cm">← reads .env, picks the model</span>
+│
+└─ <span class="tr-dir">framework/</span>                  <span class="tr-cm">← the reusable engine (shared by every lab)</span>
+   ├─ <span class="tr-file">state.ts</span>                <span class="tr-cm">← immutable state: addInput / addAnalysis</span>
+   ├─ <span class="tr-file">types.ts</span>                <span class="tr-cm">← the data shapes (all readonly)</span>
+   └─ <span class="tr-dir">providers/</span>
+      ├─ <span class="tr-file">types.ts</span>             <span class="tr-cm">← the LLMProvider contract</span>
+      └─ <span class="tr-file">gemini.ts</span> <span class="tr-cm">· openai · anthropic · claude-code · codex · mock</span></code></pre>
+        </details>
 
         <!-- System prompt callout -->
         <aside class="cv-callout">
@@ -1542,6 +1538,22 @@
     color: #f5f5fa;
     font-weight: 700;
   }
+  summary.cv-h3 {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    padding: 0.2rem 0;
+  }
+  summary.cv-h3::-webkit-details-marker { display: none; }
+  .cv-chev {
+    margin-left: auto;
+    color: #6f6f86;
+    font-size: 0.85rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  summary.cv-h3:hover .cv-chev { color: #bd93f9; }
+  details[open] > summary .cv-chev { transform: rotate(90deg); }
+  details.cv-section:not([open]) > summary.cv-h3 { margin-bottom: 0; }
 
   .cv-num {
     display: inline-flex;

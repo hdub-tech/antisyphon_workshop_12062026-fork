@@ -1,4 +1,18 @@
 <script lang="ts">
+  import BrainIcon from "phosphor-svelte/lib/BrainIcon";
+  import WrenchIcon from "phosphor-svelte/lib/WrenchIcon";
+  import EyeIcon from "phosphor-svelte/lib/EyeIcon";
+  import ToolboxIcon from "phosphor-svelte/lib/ToolboxIcon";
+  import ArrowsClockwiseIcon from "phosphor-svelte/lib/ArrowsClockwiseIcon";
+  import BracketsCurlyIcon from "phosphor-svelte/lib/BracketsCurlyIcon";
+  import ShieldCheckIcon from "phosphor-svelte/lib/ShieldCheckIcon";
+  import StackIcon from "phosphor-svelte/lib/StackIcon";
+  import RobotIcon from "phosphor-svelte/lib/RobotIcon";
+  import CursorClickIcon from "phosphor-svelte/lib/CursorClickIcon";
+  import HardDrivesIcon from "phosphor-svelte/lib/HardDrivesIcon";
+  import FloppyDiskIcon from "phosphor-svelte/lib/FloppyDiskIcon";
+  import ArrowRightIcon from "phosphor-svelte/lib/ArrowRightIcon";
+
   type Trace = {
     id?: string;
     step: number;
@@ -130,7 +144,7 @@
 
 
   let sessionId = $state(`lab03-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  let activeTab = $state<"chat" | "trace">("chat");
+  let activeTab = $state<"chat" | "trace" | "code">("chat");
   let message = $state("");
   let turns = $state<Turn[]>([]);
   let availableTools = $state<ToolDefinition[]>(initialTools);
@@ -357,7 +371,7 @@
   </header>
 
   <section class="workspace">
-    <section class="console panel">
+    <section class="console panel" class:bare={activeTab === "code"}>
       <div class="panel-title">
         <h2>Agent Console</h2>
         <div class="panel-actions">
@@ -383,6 +397,15 @@
           onclick={() => activeTab = "trace"}
         >
           Execution Trace ({toolActionCount()})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class:active={activeTab === "code"}
+          aria-selected={activeTab === "code"}
+          onclick={() => activeTab = "code"}
+        >
+          Code
         </button>
       </div>
 
@@ -416,7 +439,7 @@
             </article>
           {/each}
         </div>
-      {:else}
+      {:else if activeTab === "trace"}
         <div class="trace-turns">
           {#if turns.length === 0}
             <article class="turn-trace placeholder">
@@ -482,14 +505,213 @@
             </article>
           {/each}
         </div>
+      {:else}
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- CODE VIEW  (architectural reference, non-interactive)-->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="code-view">
+          <div class="code-inner">
+            <!-- Intro -->
+            <header class="cv-hero">
+              <span class="cv-eyebrow">Under the Hood</span>
+              <h2>How the agent actually works</h2>
+              <p>
+                Optional reading for the curious. In Lab 03 the agent answered in a single
+                model call. Here it does something bigger: it <strong>reasons in a loop</strong>,
+                calling tools to gather evidence before it answers. This is the first lab where
+                the model decides <em>what to do next</em> — the essence of an agent. Every box
+                below maps to a real file you can open afterwards.
+              </p>
+              <div class="cv-mental-model">
+                <BrainIcon size={20} weight="duotone" />
+                <span>think</span>
+                <span class="cv-mm-sep">→</span>
+                <WrenchIcon size={20} weight="duotone" />
+                <span>act (call a tool)</span>
+                <span class="cv-mm-sep">→</span>
+                <EyeIcon size={20} weight="duotone" />
+                <span>observe</span>
+                <span class="cv-mm-sep">↺</span>
+              </div>
+            </header>
+
+            <!-- A · Journey -->
+            <details class="cv-section" open>
+              <summary class="cv-h3"><span class="cv-num">A</span> The journey of one turn<span class="cv-chev" aria-hidden="true">▸</span></summary>
+              <p class="cv-lead">
+                Follow a single question. Unlike Lab 03's one-shot answer, the work here is a
+                short loop of model calls with tool runs in between.
+              </p>
+
+              <ol class="flow">
+                <li class="flow-step" style="--d: 0ms">
+                  <span class="flow-rail"><CursorClickIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">You ask a question</span><span class="flow-where">browser</span></div>
+                    <p>Your message and a stable <code>sessionId</code> are posted to the server, so this turn joins the same ongoing investigation.</p>
+                  </div>
+                </li>
+                <li class="flow-step" style="--d: 90ms">
+                  <span class="flow-rail"><HardDrivesIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">Load session, window the context</span><span class="flow-where">server · session.ts</span></div>
+                    <p>The harness loads prior turns <em>and</em> prior tool results, then trims them to a token budget — so the agent remembers the investigation without overflowing.</p>
+                  </div>
+                </li>
+                <li class="flow-step" style="--d: 180ms">
+                  <span class="flow-rail"><ArrowsClockwiseIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">The reasoning loop runs</span><span class="flow-badge">the heart of it</span><span class="flow-where">server · demo.ts</span></div>
+                    <p>Up to four times: the model returns a JSON decision — a <em>thought</em> plus either "call this tool" or "finish". Each tool result comes back as an observation the model sees on the next pass.</p>
+                  </div>
+                </li>
+                <li class="flow-step" style="--d: 270ms">
+                  <span class="flow-rail"><WrenchIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">Tools execute — deterministically</span><span class="flow-where">server · tools.ts</span></div>
+                    <p>When the model picks a tool, the harness runs a plain function over the candidate data and returns the result. Tools are not model calls — the model only <em>chooses</em> them.</p>
+                  </div>
+                </li>
+                <li class="flow-step" style="--d: 360ms">
+                  <span class="flow-rail"><RobotIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">The model composes the answer</span><span class="flow-where">server · providers/*</span></div>
+                    <p>Once the loop finishes, one last model call turns all the gathered observations into the written reply you read in the Chat tab.</p>
+                  </div>
+                </li>
+                <li class="flow-step" style="--d: 450ms">
+                  <span class="flow-rail"><FloppyDiskIcon size={22} weight="duotone" /></span>
+                  <div class="flow-body">
+                    <div class="flow-top"><span class="flow-title">Save the turn + traces, report back</span><span class="flow-where">server → browser</span></div>
+                    <p>The turn and every tool trace are saved to the session, then sent back — the answer to <em>Chat</em>, the full step-by-step to <em>Execution Trace</em>.</p>
+                  </div>
+                </li>
+              </ol>
+            </details>
+
+            <!-- B · The loop -->
+            <details class="cv-section" open>
+              <summary class="cv-h3"><span class="cv-num">B</span> The reasoning loop, up close<span class="cv-chev" aria-hidden="true">▸</span></summary>
+              <p class="cv-lead">
+                This is the pattern that turns a chatbot into an agent: <strong>Thought → Action →
+                Observation</strong>, repeated until the model has enough to answer.
+              </p>
+
+              <div class="tao">
+                <div class="tao-cycle">
+                  <span class="tao-node tao-t">Thought</span>
+                  <ArrowRightIcon size={14} weight="bold" />
+                  <span class="tao-node tao-a">Action — call a tool</span>
+                  <ArrowRightIcon size={14} weight="bold" />
+                  <span class="tao-node tao-o">Observation</span>
+                  <span class="tao-loop">↺ up to 4×</span>
+                </div>
+                <div class="tao-then">
+                  <ArrowRightIcon size={14} weight="bold" />
+                  <span class="tao-node tao-f">Finish</span>
+                  <ArrowRightIcon size={14} weight="bold" />
+                  <span class="tao-node tao-c">Compose the answer</span>
+                </div>
+              </div>
+
+              <p class="cv-note">
+                Each pass, the model must return one strict JSON decision — nothing else. The
+                harness parses it, runs the chosen tool (or stops), and loops:
+              </p>
+              <pre class="cv-code"><code>&#123;
+  <span class="c-key">"thought"</span>: <span class="c-str">"I need this candidate's attribution"</span>,
+  <span class="c-key">"action"</span>: <span class="c-str">"call_tool"</span>,        <span class="c-cm">// or "finish"</span>
+  <span class="c-key">"tool"</span>: <span class="c-str">"get_candidate_detail"</span>,
+  <span class="c-key">"args"</span>: &#123; <span class="c-key">"candidateId"</span>: <span class="c-str">"BEA-001"</span> &#125;
+&#125;</code></pre>
+            </details>
+
+            <!-- C · Toolbox -->
+            <details class="cv-section" open>
+              <summary class="cv-h3"><span class="cv-num">C</span> The toolbox<span class="cv-chev" aria-hidden="true">▸</span></summary>
+              <p class="cv-lead">
+                Six deterministic tools are exposed to the agent. The model can only choose from
+                these — each is a plain data query, no AI inside.
+              </p>
+              <div class="tb-list">
+                <div class="tb-tool"><code>query_candidates</code><span>Find candidates by type, score, host, destination, process, or id.</span></div>
+                <div class="tb-tool"><code>get_candidate_detail</code><span>Open one candidate: attribution, enrichment, score, evidence ids.</span></div>
+                <div class="tb-tool"><code>get_related_events</code><span>Pull the raw Sysmon / connection events behind a candidate.</span></div>
+                <div class="tb-tool"><code>lookup_asset</code><span>Host context — observed users, processes, and inferred asset role.</span></div>
+                <div class="tb-tool"><code>lookup_threat_intel</code><span>Check a destination for threat-intel matches, source, and tags.</span></div>
+                <div class="tb-tool"><code>explain_score</code><span>Break down why a candidate scored high or low before trusting it.</span></div>
+              </div>
+            </details>
+
+            <!-- D · Four ideas -->
+            <details class="cv-section" open>
+              <summary class="cv-h3"><span class="cv-num">D</span> Four ideas worth understanding<span class="cv-chev" aria-hidden="true">▸</span></summary>
+              <div class="cv-cards">
+                <article class="cv-card">
+                  <div class="cv-card-head"><BrainIcon size={26} weight="duotone" /><h4>The model decides; the harness acts</h4></div>
+                  <p>The model never touches the data. It only emits a decision — which tool, which arguments — and the harness runs it. That split keeps the agent's actions auditable and safe.</p>
+                </article>
+                <article class="cv-card">
+                  <div class="cv-card-head"><ShieldCheckIcon size={26} weight="duotone" /><h4>A strict contract keeps the loop bounded</h4></div>
+                  <p>Every decision must be valid JSON naming a known tool; anything else is rejected as an error trace. And the loop is capped at four steps — it can gather evidence, but it can't spin forever.</p>
+                  <div class="cv-chain">
+                    <span class="cv-chip">valid JSON only</span>
+                    <span class="cv-chip">known tools only</span>
+                    <span class="cv-chip cv-chip-live">≤ 4 steps</span>
+                  </div>
+                </article>
+                <article class="cv-card">
+                  <div class="cv-card-head"><RobotIcon size={26} weight="duotone" /><h4>Two shapes of model call per turn</h4></div>
+                  <p>Inside the loop are <em>decision</em> calls (pick a tool). After it comes one <em>compose</em> call that writes the final answer. So a single turn is up to four decisions plus one reply.</p>
+                </article>
+                <article class="cv-card">
+                  <div class="cv-card-head"><StackIcon size={26} weight="duotone" /><h4>Memory now carries tool traces</h4></div>
+                  <p>Building on Lab 03, the session remembers not just turns but the tool results from earlier turns — all windowed to a token budget, so a long investigation stays coherent and bounded.</p>
+                </article>
+              </div>
+            </details>
+
+            <!-- E · File tree -->
+            <details class="cv-section" open>
+              <summary class="cv-h3"><span class="cv-num">E</span> Where each piece lives<span class="cv-chev" aria-hidden="true">▸</span></summary>
+              <p class="cv-lead">The agent loop and its tools are a few framework files. Open any of them for the full detail.</p>
+              <pre class="cv-tree"><code><span class="tr-dir">hunting-agent/src/</span>
+│
+├─ <span class="tr-dir">routes/lab/04/api/chat/</span>
+│  └─ <span class="tr-file">+server.ts</span>              <span class="tr-cm">← the endpoint; streams the turn back</span>
+│
+└─ <span class="tr-dir">framework/</span>
+   ├─ <span class="tr-file">demo.ts</span>                 <span class="tr-cm">← runs the TAO loop + composes the answer</span>
+   ├─ <span class="tr-file">tools.ts</span>                <span class="tr-cm">← the six tools + how they execute</span>
+   ├─ <span class="tr-file">session.ts</span>             <span class="tr-cm">← session store + context windowing</span>
+   ├─ <span class="tr-dir">prompts/</span>
+   │  └─ <span class="tr-file">triage.ts</span>            <span class="tr-cm">← system prompt + the decision/compose prompts</span>
+   └─ <span class="tr-dir">providers/</span>              <span class="tr-cm">← the model client (one per vendor)</span></code></pre>
+            </details>
+
+            <!-- Callout -->
+            <aside class="cv-callout">
+              <ArrowsClockwiseIcon size={22} weight="duotone" />
+              <p>
+                <strong>Why a loop instead of one call?</strong> Real triage isn't answerable in
+                one shot — you look something up, then decide what to check next based on what you
+                found. The loop lets the agent do exactly that: gather evidence step by step, then
+                reason over all of it. Every later lab builds on this think-act-observe core.
+              </p>
+            </aside>
+          </div>
+        </div>
       {/if}
 
+      {#if activeTab !== "code"}
       <form onsubmit={(event) => { event.preventDefault(); send(); }}>
         <input bind:value={message} aria-label="Message" disabled={busy} />
         <button disabled={busy || !message.trim()}>{busy ? statusText || "Working" : "Send"}</button>
       </form>
+      {/if}
     </section>
 
+    {#if activeTab !== "code"}
     <details class="panel tools-panel" bind:open={toolsOpen}>
       <summary>
         <div class="panel-title">
@@ -509,6 +731,7 @@
         </div>
       {/if}
     </details>
+    {/if}
   </section>
 </main>
 
@@ -562,6 +785,12 @@
     padding: 1rem;
     background: rgba(33, 34, 44, 0.9);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  }
+  /* Code tab: lesson sits straight on the page, not on the glass card. */
+  .console.panel.bare {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
   }
 
   .panel-title {
@@ -889,5 +1118,382 @@
     .tool-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  /* ═══ CODE VIEW (architectural reference) ══════════════ */
+  .code-view { padding: 0.25rem 0 0; }
+  .code-inner {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 1.25rem 0.25rem 2rem;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .code-view :global(code) {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.86em;
+    color: #f1fa8c;
+    background: rgba(241, 250, 140, 0.07);
+    border: 1px solid rgba(241, 250, 140, 0.12);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+    word-break: break-word;
+  }
+  .code-view strong { color: #e8e8f0; font-weight: 700; }
+  .code-view em { color: #bd93f9; font-style: normal; }
+
+  .cv-hero { animation: cvRise 0.5s ease both; }
+  .cv-eyebrow {
+    display: inline-block;
+    color: #bd93f9;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  .cv-hero h2 {
+    margin: 0;
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    line-height: 1.05;
+    color: #f5f5fa;
+    font-weight: 700;
+  }
+  .cv-hero p {
+    max-width: 64ch;
+    margin: 1rem 0 0;
+    color: #b6b6c6;
+    font-size: 0.98rem;
+    line-height: 1.75;
+  }
+  .cv-mental-model {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid #1f1f33;
+    border-radius: 8px;
+    background: rgba(18, 18, 26, 0.7);
+    color: #cfcfe0;
+    font-size: 0.92rem;
+  }
+  .cv-mental-model :global(svg) { color: #8be9fd; flex-shrink: 0; }
+  .cv-mm-sep { color: #50fa7b; font-size: 1.05rem; margin: 0 0.15rem; }
+
+  .cv-section { margin-top: 1.6rem; }
+  .cv-h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    color: #f5f5fa;
+    font-weight: 700;
+  }
+  summary.cv-h3 {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    padding: 0.2rem 0;
+  }
+  summary.cv-h3::-webkit-details-marker { display: none; }
+  .cv-chev {
+    margin-left: auto;
+    color: #6f6f86;
+    font-size: 0.85rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  summary.cv-h3:hover .cv-chev { color: #bd93f9; }
+  details[open] > summary .cv-chev { transform: rotate(90deg); }
+  details.cv-section:not([open]) > summary.cv-h3 { margin-bottom: 0; }
+  .cv-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 6px;
+    background: rgba(189, 147, 249, 0.14);
+    border: 1px solid rgba(189, 147, 249, 0.4);
+    color: #bd93f9;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+  .cv-lead {
+    max-width: 64ch;
+    margin: 0 0 1.4rem;
+    color: #9a9aaa;
+    font-size: 0.94rem;
+    line-height: 1.7;
+  }
+
+  /* Vertical flow */
+  .flow { list-style: none; margin: 0; padding: 0.4rem 0 0; }
+  .flow-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 1.1rem;
+    padding-bottom: 1.5rem;
+    opacity: 0;
+    animation: cvRise 0.55s ease forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-step::before {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 48px;
+    bottom: -2px;
+    width: 2px;
+    background: linear-gradient(180deg, #bd93f9, #50fa7b);
+    background-size: 100% 220%;
+    opacity: 0.45;
+    animation: cvFlow 2.4s linear infinite;
+  }
+  .flow-step:last-child::before { display: none; }
+  .flow-rail {
+    position: relative;
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #12121a;
+    border: 1px solid rgba(189, 147, 249, 0.45);
+    color: #bd93f9;
+    box-shadow: 0 0 0 4px #0a0a0f;
+  }
+  .flow-body {
+    border: 1px solid #1c1c30;
+    border-radius: 8px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 0.85rem 1.05rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .flow-body:hover { border-color: #2e2e4e; transform: translateX(2px); }
+  .flow-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.7rem;
+    margin-bottom: 0.35rem;
+  }
+  .flow-title { color: #e8e8f0; font-weight: 700; font-size: 1rem; }
+  .flow-where {
+    color: #6f6f86;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+    margin-left: auto;
+  }
+  .flow-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #f5e663;
+    border: 1px solid rgba(245, 230, 99, 0.5);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+  }
+  .flow-body p {
+    margin: 0;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  /* TAO loop visual */
+  .tao {
+    border: 1px solid #1c1c30;
+    border-radius: 10px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 1.1rem 1.2rem;
+  }
+  .tao-cycle, .tao-then {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tao-then { margin-top: 0.7rem; }
+  .tao :global(svg) { color: #6f6f86; }
+  .tao-node {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #cfcfe0;
+    background: #0d0d14;
+    border: 1px solid #2a2a40;
+    border-radius: 6px;
+    padding: 0.35rem 0.7rem;
+  }
+  .tao-t { border-color: rgba(139, 233, 253, 0.5); color: #8be9fd; }
+  .tao-a { border-color: rgba(189, 147, 249, 0.5); color: #bd93f9; }
+  .tao-o { border-color: rgba(80, 250, 123, 0.5); color: #50fa7b; }
+  .tao-f { border-color: rgba(245, 230, 99, 0.5); color: #f5e663; }
+  .tao-c { border-color: rgba(245, 230, 99, 0.5); color: #f5e663; }
+  .tao-loop {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ff79c6;
+    border: 1px dashed rgba(255, 121, 198, 0.55);
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+  }
+  .cv-note {
+    margin: 1rem 0 0.85rem;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* Toolbox */
+  .tb-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .tb-tool {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.8rem;
+    border: 1px solid #1c1c30;
+    border-radius: 8px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 0.6rem 0.85rem;
+  }
+  .tb-tool span {
+    color: #aeaebe;
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  /* Concept cards */
+  .cv-cards { display: flex; flex-direction: column; gap: 1rem; }
+  .cv-card {
+    border: 1px solid #1c1c30;
+    border-radius: 10px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 1.1rem 1.2rem 1.25rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .cv-card:hover { border-color: #33335a; transform: translateY(-2px); }
+  .cv-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    color: #bd93f9;
+  }
+  .cv-card-head h4 {
+    margin: 0;
+    font-size: 1.02rem;
+    color: #f0f0f6;
+    font-weight: 700;
+  }
+  .cv-card p {
+    margin: 0 0 0.9rem;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+  .cv-card p:last-child { margin-bottom: 0; }
+
+  .cv-code {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .cv-code :global(code) {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #d6d6e2;
+    font-size: 0.82rem;
+  }
+  .cv-code .c-key { color: #8be9fd; }
+  .cv-code .c-str { color: #f1fa8c; }
+  .cv-code .c-cm { color: #6272a4; }
+
+  .cv-chain {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .cv-chip {
+    font-size: 0.8rem;
+    color: #cfcfe0;
+    background: #0d0d14;
+    border: 1px solid #2a2a40;
+    border-radius: 5px;
+    padding: 0.3rem 0.6rem;
+    white-space: nowrap;
+  }
+  .cv-chip-live {
+    color: #f5e663;
+    border-color: rgba(245, 230, 99, 0.5);
+    box-shadow: 0 0 10px rgba(245, 230, 99, 0.15);
+  }
+
+  .cv-tree {
+    margin: 0;
+    padding: 1rem 1.15rem;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 9px;
+    overflow-x: auto;
+    color: #5f6075;
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+  .cv-tree :global(code) {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  .cv-tree .tr-dir { color: #8be9fd; }
+  .cv-tree .tr-file { color: #f1fa8c; }
+  .cv-tree .tr-cm { color: #6f6f86; }
+
+  .cv-callout {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-top: 1.8rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid rgba(189, 147, 249, 0.28);
+    border-left: 3px solid #bd93f9;
+    border-radius: 8px;
+    background: rgba(189, 147, 249, 0.06);
+  }
+  .cv-callout :global(svg) { color: #bd93f9; flex-shrink: 0; margin-top: 2px; }
+  .cv-callout p {
+    margin: 0;
+    color: #c2c2d2;
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  @keyframes cvRise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes cvFlow {
+    from { background-position: 0 0; }
+    to { background-position: 0 -220%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flow-step,
+    .cv-hero { animation: none; opacity: 1; }
+    .flow-step::before { animation: none; }
   }
 </style>
