@@ -1,6 +1,21 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { parseMarkdown, renderInline, type MarkdownBlock } from "$lib/markdown.js";
+  import ShieldCheckIcon from "phosphor-svelte/lib/ShieldCheckIcon";
+  import BuildingsIcon from "phosphor-svelte/lib/BuildingsIcon";
+  import ScalesIcon from "phosphor-svelte/lib/ScalesIcon";
+  import ListMagnifyingGlassIcon from "phosphor-svelte/lib/ListMagnifyingGlassIcon";
+  import BracketsCurlyIcon from "phosphor-svelte/lib/BracketsCurlyIcon";
+  import FoldersIcon from "phosphor-svelte/lib/FoldersIcon";
+  import FunnelIcon from "phosphor-svelte/lib/FunnelIcon";
+  import RobotIcon from "phosphor-svelte/lib/RobotIcon";
+  import LinkIcon from "phosphor-svelte/lib/LinkIcon";
+  import SyringeIcon from "phosphor-svelte/lib/SyringeIcon";
+  import StackIcon from "phosphor-svelte/lib/StackIcon";
+  import GitBranchIcon from "phosphor-svelte/lib/GitBranchIcon";
+  import FileTextIcon from "phosphor-svelte/lib/FileTextIcon";
+  import DatabaseIcon from "phosphor-svelte/lib/DatabaseIcon";
+  import ArrowRightIcon from "phosphor-svelte/lib/ArrowRightIcon";
 
   type ContextRequirement = {
     id: string;
@@ -142,6 +157,7 @@
   const LAB05_HANDOFF_KEY = "antisiphon.lab05.detectionFinding";
   const FALLBACK_DETECTION_SKILL = "skills/detection/hunt-c2-over-https.md";
 
+  let activeTab = $state<"lab" | "code">("lab");
   let skills = $state<SkillSummary[]>([]);
   let schemaContext = $state<ResolvedContext | null>(null);
   let detectionFinding = $state<Record<string, unknown> | null>(null);
@@ -442,6 +458,12 @@
     <h1>Lab 07: Assessment Skill + Context Injection</h1>
   </header>
 
+  <div class="tab-bar-top">
+    <button class="tab-btn-top" class:active={activeTab === "lab"} onclick={() => (activeTab = "lab")}>Lab</button>
+    <button class="tab-btn-top" class:active={activeTab === "code"} onclick={() => (activeTab = "code")}>Code</button>
+  </div>
+
+  {#if activeTab === "lab"}
   {#if error}
     <section class="error-panel">{error}</section>
   {/if}
@@ -596,6 +618,185 @@
       <p class="empty">The trace appears after assessment execution.</p>
     {/if}
   </details>
+  {:else}
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- CODE VIEW  (architectural reference, non-interactive)-->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="code-view">
+      <div class="code-inner">
+        <!-- Intro -->
+        <header class="cv-hero">
+          <span class="cv-eyebrow">Under the Hood</span>
+          <h2>How the agent uses your organization's context</h2>
+          <p>
+            Optional reading for the curious. Lab 06 answered "is this malicious?". This lab asks
+            the harder question — "how bad is it, <em>in our environment</em>?" — which a detection
+            alone can't answer. The assessment skill declares exactly which organizational context
+            it needs (asset records, compliance policy, incident history); the harness loads those
+            files and <strong>injects</strong> them, alongside the upstream <code>DetectionFinding</code>,
+            into the model's prompt.
+          </p>
+          <div class="cv-mental-model">
+            <ShieldCheckIcon size={20} weight="duotone" />
+            <span>upstream DetectionFinding</span>
+            <span class="cv-mm-sep">+</span>
+            <BuildingsIcon size={20} weight="duotone" />
+            <span>injected org context</span>
+            <span class="cv-mm-sep">→</span>
+            <ScalesIcon size={20} weight="duotone" />
+            <span>AssessmentFinding</span>
+          </div>
+        </header>
+
+        <!-- A · Journey -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">A</span> The journey of one assessment<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <p class="cv-lead">
+            Five phases. The new one is <em>context</em> — resolving the exact files the skill asked
+            for. As in Lab 06, only the last phase calls the model.
+          </p>
+
+          <ol class="flow">
+            <li class="flow-step" style="--d: 0ms">
+              <span class="flow-rail"><ListMagnifyingGlassIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Discover assessment skills</span><span class="flow-where">server · skill-loader.ts</span></div>
+                <p>The harness lists skills and keeps the <code>layer: assessment</code> ones with static context. (Retrieval-backed skills are Lab 08.)</p>
+              </div>
+            </li>
+            <li class="flow-step" style="--d: 90ms">
+              <span class="flow-rail"><BracketsCurlyIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Inspect inputs &amp; context requirements</span><span class="flow-where">server · api/skills</span></div>
+                <p>The frontmatter declares its input (a <code>DetectionFinding</code>) and a list of <code>contextRequirements</code> — each with an <code>id</code>, a <code>mode</code>, and a file <code>path</code>.</p>
+              </div>
+            </li>
+            <li class="flow-step" style="--d: 180ms">
+              <span class="flow-rail"><FoldersIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Resolve &amp; inject the context</span><span class="flow-badge">the key step</span><span class="flow-where">server · api/skills</span></div>
+                <p><code>resolveContextBundle()</code> reads each declared file — asset record, escalation policy, incident history — plus the shared field guide. These become the injected context bundle.</p>
+              </div>
+            </li>
+            <li class="flow-step" style="--d: 270ms">
+              <span class="flow-rail"><FunnelIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Resolve the upstream evidence</span><span class="flow-where">server · api/skills</span></div>
+                <p>The DetectionFinding names the candidate that fired; the harness pulls that trigger plus its related candidates so the model can cite real evidence.</p>
+              </div>
+            </li>
+            <li class="flow-step" style="--d: 360ms">
+              <span class="flow-rail"><RobotIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Execute — the model assesses</span><span class="flow-where">server · providers/*</span></div>
+                <p>Skill body = system prompt; the DetectionFinding + injected context + evidence = user prompt. The model judges severity and streams back an <code>AssessmentFinding</code>, citing the context line behind every claim.</p>
+              </div>
+            </li>
+          </ol>
+        </details>
+
+        <!-- B · What the model is given -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">B</span> What the model is given<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <p class="cv-lead">
+            "Context injection" just means: the harness assembles a precise bundle and hands it to
+            the model. Here is exactly what goes in this turn.
+          </p>
+
+          <div class="assembly">
+            <div class="asm-inputs">
+              <div class="asm-row asm-sys">
+                <FileTextIcon size={18} weight="duotone" />
+                <div><strong>Skill body</strong><small>→ system prompt: the assessment procedure</small></div>
+              </div>
+              <div class="asm-row asm-user">
+                <ShieldCheckIcon size={18} weight="duotone" />
+                <div><strong>Upstream DetectionFinding</strong><small>→ user prompt: what Lab 06 concluded</small></div>
+              </div>
+              <div class="asm-row asm-user">
+                <BuildingsIcon size={18} weight="duotone" />
+                <div><strong>Injected context</strong><small>→ user prompt: the resolved org files</small></div>
+              </div>
+              <div class="asm-row asm-user">
+                <DatabaseIcon size={18} weight="duotone" />
+                <div><strong>Supporting evidence</strong><small>→ user prompt: the candidate records</small></div>
+              </div>
+            </div>
+            <div class="asm-arrow"><ArrowRightIcon size={20} weight="bold" /></div>
+            <div class="asm-out">
+              <RobotIcon size={22} weight="duotone" />
+              <strong>model</strong>
+              <ScalesIcon size={16} weight="duotone" />
+              <span>AssessmentFinding</span>
+            </div>
+          </div>
+          <p class="cv-note">
+            Every contextual claim the model makes must name the injected file it came from — so the
+            assessment is grounded and auditable, never a guess.
+          </p>
+        </details>
+
+        <!-- C · Four ideas -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">C</span> Four ideas worth understanding<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <div class="cv-cards">
+            <article class="cv-card">
+              <div class="cv-card-head"><LinkIcon size={26} weight="duotone" /><h4>Skills compose into a pipeline</h4></div>
+              <p>Lab 06's <code>DetectionFinding</code> is this lab's input. Detection asks "malicious?"; assessment asks "how severe, given our org?". One skill's output is the next skill's input.</p>
+            </article>
+            <article class="cv-card">
+              <div class="cv-card-head"><SyringeIcon size={26} weight="duotone" /><h4>Context is injected explicitly</h4></div>
+              <p>The skill names the exact files it needs in <code>contextRequirements</code>. The harness loads precisely those and nothing else — the model can't reach for hidden context.</p>
+            </article>
+            <article class="cv-card">
+              <div class="cv-card-head"><StackIcon size={26} weight="duotone" /><h4>Organizational context is layered</h4></div>
+              <p>Context lives in layers — assets, compliance, incident history — under <code>context/layers/</code>. A skill pulls only the layers its assessment actually needs.</p>
+              <div class="cv-chain">
+                <span class="cv-chip">assets</span>
+                <span class="cv-chip">compliance</span>
+                <span class="cv-chip">incidents</span>
+              </div>
+            </article>
+            <article class="cv-card">
+              <div class="cv-card-head"><GitBranchIcon size={26} weight="duotone" /><h4>Static now, retrieval next</h4></div>
+              <p>Each requirement has a <code>mode</code>. This lab only resolves <code>static</code> — fixed file paths. When the right context isn't known in advance, you retrieve it instead — that's Lab 08 (RAG).</p>
+            </article>
+          </div>
+        </details>
+
+        <!-- D · File tree -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">D</span> Where each piece lives<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <p class="cv-lead">Assessment skills and the org context they pull from are both just files.</p>
+          <pre class="cv-tree"><code><span class="tr-dir">hunting-agent/</span>
+│
+├─ <span class="tr-dir">skills/assessment/</span>            <span class="tr-cm">← assessment skills (Markdown + YAML)</span>
+│  ├─ <span class="tr-file">assess-severity.md</span>
+│  └─ <span class="tr-file">assess-behavioral-context.md</span>
+│
+├─ <span class="tr-dir">context/layers/</span>               <span class="tr-cm">← the organizational context, in layers</span>
+│  ├─ <span class="tr-dir">layer_1_assets/</span>           <span class="tr-cm">← host roles, owners, blast radius</span>
+│  ├─ <span class="tr-dir">layer_2_compliance/</span>       <span class="tr-cm">← escalation policy, evidence rules</span>
+│  └─ <span class="tr-dir">layer_5_incidents/</span>        <span class="tr-cm">← prior incident history</span>
+│
+└─ <span class="tr-dir">src/routes/lab/07/api/skills/</span>
+   └─ <span class="tr-file">+server.ts</span>             <span class="tr-cm">← resolve context · inject · call the model</span></code></pre>
+        </details>
+
+        <!-- Callout -->
+        <aside class="cv-callout">
+          <SyringeIcon size={22} weight="duotone" />
+          <p>
+            <strong>Why inject context explicitly?</strong> An assessment is only trustworthy if you
+            can see what it was based on. By declaring the exact files up front, every severity
+            judgement traces to a named source — the asset's criticality, the escalation deadline,
+            the prior incident. No hidden inputs, no ungrounded claims. When the needed context
+            <em>isn't</em> known ahead of time, you retrieve it — which is exactly where Lab 08 goes.
+          </p>
+        </aside>
+      </div>
+    </div>
+  {/if}
 </main>
 
 {#snippet DetectionFindingView({ finding, source }: { finding: Record<string, unknown>; source: string })}
@@ -1076,5 +1277,368 @@
     .skill-list.horizontal { grid-template-columns: 1fr; }
     dl > div { grid-template-columns: 1fr; gap: .2rem; }
     summary small { float: none; display: block; margin-top: .25rem; }
+  }
+
+  /* ═══ Top tab bar ══════════════════════════════════════ */
+  .tab-bar-top {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #1a1a2e;
+    margin-bottom: 1rem;
+  }
+  .tab-btn-top {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 0.85rem 1.5rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1rem;
+    color: #8a8a9a;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn-top:hover { color: #c0c0d0; }
+  .tab-btn-top.active { color: #f5e663; border-bottom-color: #f5e663; }
+
+  /* ═══ CODE VIEW (architectural reference) ══════════════ */
+  .code-view { padding: 0.25rem 0 0; }
+  .code-inner {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0.5rem 0.25rem 2rem;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .code-view code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.86em;
+    color: #f1fa8c;
+    background: rgba(241, 250, 140, 0.07);
+    border: 1px solid rgba(241, 250, 140, 0.12);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+    word-break: break-word;
+  }
+  .code-view strong { color: #e8e8f0; font-weight: 700; }
+  .code-view em { color: #bd93f9; font-style: normal; }
+
+  .cv-hero { animation: cvRise 0.5s ease both; }
+  .cv-eyebrow {
+    display: inline-block;
+    color: #bd93f9;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  .cv-hero h2 {
+    margin: 0;
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    line-height: 1.05;
+    color: #f5f5fa;
+    font-weight: 700;
+  }
+  .cv-hero p {
+    max-width: 64ch;
+    margin: 1rem 0 0;
+    color: #b6b6c6;
+    font-size: 0.98rem;
+    line-height: 1.75;
+  }
+  .cv-mental-model {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid #1f1f33;
+    border-radius: 8px;
+    background: rgba(18, 18, 26, 0.7);
+    color: #cfcfe0;
+    font-size: 0.92rem;
+  }
+  .cv-mental-model :global(svg) { color: #8be9fd; flex-shrink: 0; }
+  .cv-mm-sep { color: #50fa7b; font-size: 1.05rem; margin: 0 0.15rem; }
+
+  .cv-section { margin-top: 1.8rem; }
+  .cv-h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    color: #f5f5fa;
+    font-weight: 700;
+  }
+  summary.cv-h3 {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    padding: 0.2rem 0;
+  }
+  summary.cv-h3::-webkit-details-marker { display: none; }
+  .cv-chev {
+    margin-left: auto;
+    color: #6f6f86;
+    font-size: 0.85rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  summary.cv-h3:hover .cv-chev { color: #bd93f9; }
+  details[open] > summary .cv-chev { transform: rotate(90deg); }
+  details.cv-section:not([open]) > summary.cv-h3 { margin-bottom: 0; }
+  .cv-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 6px;
+    background: rgba(189, 147, 249, 0.14);
+    border: 1px solid rgba(189, 147, 249, 0.4);
+    color: #bd93f9;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+  .cv-lead {
+    max-width: 64ch;
+    margin: 0 0 1.4rem;
+    color: #9a9aaa;
+    font-size: 0.94rem;
+    line-height: 1.7;
+  }
+
+  /* Vertical flow */
+  .flow { list-style: none; margin: 0; padding: 0.4rem 0 0; }
+  .flow-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 1.1rem;
+    padding-bottom: 1.5rem;
+    opacity: 0;
+    animation: cvRise 0.55s ease forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-step::before {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 48px;
+    bottom: -2px;
+    width: 2px;
+    background: linear-gradient(180deg, #bd93f9, #50fa7b);
+    background-size: 100% 220%;
+    opacity: 0.45;
+    animation: cvFlow 2.4s linear infinite;
+  }
+  .flow-step:last-child::before { display: none; }
+  .flow-rail {
+    position: relative;
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #12121a;
+    border: 1px solid rgba(189, 147, 249, 0.45);
+    color: #bd93f9;
+    box-shadow: 0 0 0 4px #0a0a0f;
+  }
+  .flow-body {
+    border: 1px solid #1c1c30;
+    border-radius: 8px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 0.85rem 1.05rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .flow-body:hover { border-color: #2e2e4e; transform: translateX(2px); }
+  .flow-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.7rem;
+    margin-bottom: 0.35rem;
+  }
+  .flow-title { color: #e8e8f0; font-weight: 700; font-size: 1rem; }
+  .flow-where {
+    color: #6f6f86;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+    margin-left: auto;
+  }
+  .flow-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #f5e663;
+    border: 1px solid rgba(245, 230, 99, 0.5);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+  }
+  .flow-body p {
+    margin: 0;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  /* Prompt assembly diagram */
+  .assembly {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem;
+    border: 1px solid #1c1c30;
+    border-radius: 10px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 1.1rem 1.2rem;
+  }
+  .asm-inputs { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 240px; }
+  .asm-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    background: #0d0d14;
+    padding: 0.5rem 0.7rem;
+  }
+  .asm-row :global(svg) { flex-shrink: 0; }
+  .asm-row strong { color: #e8e8f0; font-size: 0.85rem; display: block; }
+  .asm-row small { color: #8a8a9a; font-size: 0.73rem; }
+  .asm-sys { border-left: 3px solid #bd93f9; }
+  .asm-sys :global(svg) { color: #bd93f9; }
+  .asm-user { border-left: 3px solid #8be9fd; }
+  .asm-user :global(svg) { color: #8be9fd; }
+  .asm-arrow { color: #6f6f86; flex-shrink: 0; }
+  .asm-out {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid rgba(80, 250, 123, 0.4);
+    border-radius: 8px;
+    background: #0d0d14;
+    padding: 0.85rem 1rem;
+    min-width: 130px;
+    text-align: center;
+  }
+  .asm-out strong { color: #e8e8f0; font-size: 0.85rem; }
+  .asm-out span { color: #50fa7b; font-size: 0.78rem; }
+  .asm-out :global(svg) { color: #50fa7b; }
+  .cv-note {
+    margin: 1rem 0 0;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* Chips */
+  .cv-chain {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .cv-chip {
+    font-size: 0.8rem;
+    color: #cfcfe0;
+    background: #0d0d14;
+    border: 1px solid #2a2a40;
+    border-radius: 5px;
+    padding: 0.3rem 0.6rem;
+    white-space: nowrap;
+  }
+
+  /* Concept cards */
+  .cv-cards { display: flex; flex-direction: column; gap: 1rem; }
+  .cv-card {
+    border: 1px solid #1c1c30;
+    border-radius: 10px;
+    background: rgba(18, 18, 26, 0.6);
+    padding: 1.1rem 1.2rem 1.25rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .cv-card:hover { border-color: #33335a; transform: translateY(-2px); }
+  .cv-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    color: #bd93f9;
+  }
+  .cv-card-head h4 {
+    margin: 0;
+    font-size: 1.02rem;
+    color: #f0f0f6;
+    font-weight: 700;
+  }
+  .cv-card p {
+    margin: 0 0 0.9rem;
+    color: #aeaebe;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+  .cv-card p:last-child { margin-bottom: 0; }
+
+  .cv-tree {
+    margin: 0;
+    padding: 1rem 1.15rem;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 9px;
+    overflow-x: auto;
+    color: #5f6075;
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+  .cv-tree code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  .cv-tree .tr-dir { color: #8be9fd; }
+  .cv-tree .tr-file { color: #f1fa8c; }
+  .cv-tree .tr-cm { color: #6f6f86; }
+
+  .cv-callout {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-top: 1.8rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid rgba(189, 147, 249, 0.28);
+    border-left: 3px solid #bd93f9;
+    border-radius: 8px;
+    background: rgba(189, 147, 249, 0.06);
+  }
+  .cv-callout :global(svg) { color: #bd93f9; flex-shrink: 0; margin-top: 2px; }
+  .cv-callout p {
+    margin: 0;
+    color: #c2c2d2;
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  @keyframes cvRise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes cvFlow {
+    from { background-position: 0 0; }
+    to { background-position: 0 -220%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flow-step,
+    .cv-hero { animation: none; opacity: 1; }
+    .flow-step::before { animation: none; }
   }
 </style>
