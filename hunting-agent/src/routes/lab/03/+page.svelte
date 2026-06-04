@@ -807,8 +807,8 @@ MEMORY_KEEP_RECENT=2        <span class="c-cm">// latest turns kept</span></code
     top: 48px;
     bottom: -2px;
     width: 2px;
-    background: linear-gradient(180deg, #bd93f9, #50fa7b);
-    background-size: 100% 220%;
+    background: linear-gradient(180deg, #bd93f9, #50fa7b, #bd93f9);
+    background-size: 100% 140px;
     opacity: 0.45;
     animation: cvFlow 2.4s linear infinite;
   }
@@ -1047,7 +1047,7 @@ MEMORY_KEEP_RECENT=2        <span class="c-cm">// latest turns kept</span></code
   }
   @keyframes cvFlow {
     from { background-position: 0 0; }
-    to { background-position: 0 -220%; }
+    to { background-position: 0 140px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .flow-step,

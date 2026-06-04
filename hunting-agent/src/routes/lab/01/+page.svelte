@@ -1599,8 +1599,8 @@
     top: 48px;
     bottom: -2px;
     width: 2px;
-    background: linear-gradient(180deg, #bd93f9, #50fa7b);
-    background-size: 100% 220%;
+    background: linear-gradient(180deg, #bd93f9, #50fa7b, #bd93f9);
+    background-size: 100% 140px;
     opacity: 0.45;
     animation: cvFlow 2.4s linear infinite;
   }
@@ -1859,7 +1859,7 @@
   }
   @keyframes cvFlow {
     from { background-position: 0 0; }
-    to { background-position: 0 -220%; }
+    to { background-position: 0 140px; }
   }
   @keyframes cvTok {
     from { opacity: 0; transform: translateY(4px); }
