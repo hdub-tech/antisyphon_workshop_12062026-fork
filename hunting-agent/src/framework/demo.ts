@@ -200,21 +200,14 @@ async function compactSessionIfNeeded(
   }
 }
 
-function extractJsonObject(text: string): string | undefined {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced?.[1] ?? text;
-  const start = candidate.indexOf("{");
-  if (start === -1) return undefined;
-
-  // Scan for the FIRST balanced top-level object, respecting strings/escapes.
-  // Using indexOf("{")..lastIndexOf("}") breaks when the model emits anything
-  // after the JSON (trailing prose, a second object), which surfaces as
-  // "Unexpected non-whitespace character after JSON".
+// Return the balanced JSON object starting at `start` (string/escape aware),
+// or undefined if it never balances (truncated).
+function balancedObjectFrom(text: string, start: number): string | undefined {
   let depth = 0;
   let inString = false;
   let escaped = false;
-  for (let i = start; i < candidate.length; i += 1) {
-    const ch = candidate[i];
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
     if (escaped) {
       escaped = false;
       continue;
@@ -231,25 +224,55 @@ function extractJsonObject(text: string): string | undefined {
     if (ch === "{") depth += 1;
     else if (ch === "}") {
       depth -= 1;
-      if (depth === 0) return candidate.slice(start, i + 1);
+      if (depth === 0) return text.slice(start, i + 1);
     }
   }
-  return undefined; // never balanced — truncated output
+  return undefined;
 }
 
+function looksLikeDecision(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  return "action" in obj || "tool" in obj || "thought" in obj || "finalAnswer" in obj;
+}
+
+// Find the first JSON object in the text that BOTH parses as JSON AND looks like
+// a tool decision. Scanning every "{" (not just the first) and requiring a valid
+// parse means stray braces in prose — e.g. GUIDs like {DEV-WS03-7219-648f1980} —
+// are skipped, so a plain-text final answer is never mistaken for broken JSON.
+function parseDecisionObject(text: string): Record<string, unknown> | undefined {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const sources = fenced?.[1] ? [fenced[1], text] : [text];
+  for (const source of sources) {
+    for (let i = 0; i < source.length; i += 1) {
+      if (source[i] !== "{") continue;
+      const slice = balancedObjectFrom(source, i);
+      if (!slice) continue;
+      try {
+        const parsed = JSON.parse(slice);
+        if (looksLikeDecision(parsed)) return parsed;
+      } catch {
+        // not valid JSON from this brace — keep scanning
+      }
+    }
+  }
+  return undefined;
+}
+
+// True when the model answered in prose (no parseable tool decision) after it
+// already gathered evidence — that prose IS the final answer, not an error.
 function isTextFinalAnswer(text: string, observationCount: number): boolean {
   return observationCount > 0
     && text.trim().length > 0
-    && extractJsonObject(text) === undefined;
+    && parseDecisionObject(text) === undefined;
 }
 
 function parseToolDecision(text: string): ToolDecision {
-  const jsonText = extractJsonObject(text);
-  if (!jsonText) {
-    throw new Error(`Model did not return JSON. Raw response: ${text.slice(0, 240)}`);
+  const parsed = parseDecisionObject(text);
+  if (!parsed) {
+    throw new Error(`Model did not return a tool decision. Raw response: ${text.slice(0, 240)}`);
   }
 
-  const parsed = JSON.parse(jsonText) as Record<string, unknown>;
   const thought = typeof parsed.thought === "string" && parsed.thought.trim()
     ? parsed.thought.trim()
     : "No rationale provided.";
