@@ -75,10 +75,14 @@ export interface ChatSession {
   readonly lastQuery?: CandidateQuery;
 }
 
-const DEFAULT_MAX_CONTEXT_TOKENS = 1800;
-const DEFAULT_RECENT_TURN_LIMIT = 6;
+// Tools-lab (Lab 04) context budget. Generous by default — the workshop runs on
+// frontier models with very large context windows, so there's no reason to window
+// the conversation down to a tiny number. (Lab 03 keeps its own small MEMORY_*
+// budget on purpose, to demonstrate compaction.) Override with CONTEXT_* env vars.
+const DEFAULT_MAX_CONTEXT_TOKENS = 32000;
+const DEFAULT_RECENT_TURN_LIMIT = 12;
 const DEFAULT_PINNED_TURN_LIMIT = 2;
-const DEFAULT_RECENT_TOOL_TRACE_LIMIT = 8;
+const DEFAULT_RECENT_TOOL_TRACE_LIMIT = 16;
 const DEFAULT_COMPACTION_TRIGGER_RATIO = 0.8;
 
 const sessions = new Map<string, ChatSession>();

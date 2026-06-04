@@ -204,9 +204,37 @@ function extractJsonObject(text: string): string | undefined {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced?.[1] ?? text;
   const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return undefined;
-  return candidate.slice(start, end + 1);
+  if (start === -1) return undefined;
+
+  // Scan for the FIRST balanced top-level object, respecting strings/escapes.
+  // Using indexOf("{")..lastIndexOf("}") breaks when the model emits anything
+  // after the JSON (trailing prose, a second object), which surfaces as
+  // "Unexpected non-whitespace character after JSON".
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < candidate.length; i += 1) {
+    const ch = candidate[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return candidate.slice(start, i + 1);
+    }
+  }
+  return undefined; // never balanced — truncated output
 }
 
 function isTextFinalAnswer(text: string, observationCount: number): boolean {
@@ -415,7 +443,7 @@ export async function processChatTurn(
     message: response,
     state,
     candidates: visibleCandidates,
-    toolTraces,
+    toolTraces: tao.traces,
     contextBudget,
     availableTools: LAB03_TOOL_DEFINITIONS,
   };
@@ -461,7 +489,9 @@ export async function processChatTurnStreaming(
   onEvent({
     type: "metadata",
     candidates: visibleCandidates,
-    toolTraces,
+    // Display only THIS turn's tool steps; the session keeps the cumulative
+    // trace (below) for context, but the UI renders one turn at a time.
+    toolTraces: tao.traces,
     contextBudget: promptOnlyBudget,
     availableTools: LAB03_TOOL_DEFINITIONS,
   });
@@ -510,7 +540,7 @@ export async function processChatTurnStreaming(
     message: response,
     state,
     candidates: visibleCandidates,
-    toolTraces,
+    toolTraces: tao.traces,
     contextBudget,
     availableTools: LAB03_TOOL_DEFINITIONS,
   };

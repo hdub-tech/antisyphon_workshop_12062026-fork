@@ -20,7 +20,7 @@ export function createAnthropicProvider(
 
       const response = await client.messages.create({
         model,
-        max_tokens: 1024,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       });
@@ -40,7 +40,7 @@ export function createAnthropicProvider(
     async *streamInvoke({ systemPrompt, userPrompt }): AsyncIterable<string> {
       const stream = client.messages.stream({
         model,
-        max_tokens: 1024,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       });
