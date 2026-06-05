@@ -3,8 +3,8 @@ import type { RequestHandler } from "./$types";
 import { runGtiMcpLifecycle, type McpLifecycleEvent } from "../../../../../framework/mcp.js";
 
 export const POST: RequestHandler = async ({ request }) => {
-  const body = (await request.json()) as { indicator?: string };
-  const indicator = body.indicator?.trim() || "185.225.73.217";
+  const body = (await request.json()) as { query?: string; indicator?: string };
+  const query = (body.query ?? body.indicator)?.trim() || "Look up the IP 185.225.73.217 on VirusTotal";
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
 
-      void runGtiMcpLifecycle({ indicator, env, emit })
+      void runGtiMcpLifecycle({ query, env, emit })
         .catch((error: unknown) => {
           emit({
             step: "done",

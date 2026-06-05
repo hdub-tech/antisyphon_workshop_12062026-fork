@@ -9,10 +9,11 @@
   import ArrowsLeftRightIcon from "phosphor-svelte/lib/ArrowsLeftRightIcon";
   import CheckCircleIcon from "phosphor-svelte/lib/CheckCircleIcon";
   import HardDrivesIcon from "phosphor-svelte/lib/HardDrivesIcon";
-  import ScalesIcon from "phosphor-svelte/lib/ScalesIcon";
   import ArrowRightIcon from "phosphor-svelte/lib/ArrowRightIcon";
+  import RobotIcon from "phosphor-svelte/lib/RobotIcon";
+  import BracketsCurlyIcon from "phosphor-svelte/lib/BracketsCurlyIcon";
 
-  type StepName = "connect" | "discover" | "call" | "done";
+  type StepName = "connect" | "discover" | "decide" | "call" | "done";
   type StepStatus = "start" | "ok" | "error";
 
   type LifecycleEvent = {
@@ -30,18 +31,19 @@
     relevant: boolean;
   };
 
-  type ToolSelection = {
+  type AgentDecision = {
     toolName: string;
     args: Record<string, unknown>;
-    reason: string;
-    indicatorType: "ip" | "domain" | "url" | "search";
+    thought: string;
+    source: "model" | "fallback";
+    model?: string;
   };
 
   let activeTab = $state<"live" | "code">("live");
-  let indicator = $state("185.225.73.217");
+  let query = $state("Look up the IP 185.225.73.217 on VirusTotal");
   let events = $state<LifecycleEvent[]>([]);
   let discoveredTools = $state<ToolSummary[]>([]);
-  let selectedTool = $state<ToolSelection | null>(null);
+  let agentDecision = $state<AgentDecision | null>(null);
   let rawResult = $state<unknown>(null);
   let parsedJson = $state<unknown>(null);
   let textResult = $state("");
@@ -53,7 +55,7 @@
   function reset() {
     events = [];
     discoveredTools = [];
-    selectedTool = null;
+    agentDecision = null;
     rawResult = null;
     parsedJson = null;
     textResult = "";
@@ -136,11 +138,11 @@
     if (event.step === "discover" && event.status === "ok") {
       const details = asRecord(event.details);
       discoveredTools = (details?.tools as ToolSummary[] | undefined) ?? [];
-      selectedTool = (details?.selectedTool as ToolSelection | undefined) ?? null;
     }
 
-    if (event.step === "call" && event.status === "start") {
-      selectedTool = event.details as ToolSelection;
+    if (event.step === "decide" && event.status === "ok") {
+      const details = asRecord(event.details);
+      agentDecision = (details?.decision as AgentDecision | undefined) ?? null;
     }
 
     if (event.step === "call" && event.status === "ok") {
@@ -163,7 +165,7 @@
       const response = await fetch("/lab/05/api/mcp", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ indicator }),
+        body: JSON.stringify({ query }),
       });
 
       if (!response.ok || !response.body) {
@@ -217,18 +219,18 @@
   {#if activeTab === "live"}
   <details class="panel" open>
     <summary class="panel-title">
-        <h2>Indicator</h2>
-        <span>GTI / VirusTotal</span>
+        <h2>Ask the Agent</h2>
+        <span>GTI / VirusTotal over MCP</span>
     </summary>
 
     <div class="controls">
       <label>
-        IP, domain, URL, or IOC query
-        <input bind:value={indicator} disabled={busy} />
+        Ask in plain language — the agent picks the GTI tool from what it discovers
+        <input bind:value={query} disabled={busy} placeholder="e.g. Look up the IP 185.225.73.217 on VirusTotal" />
       </label>
 
       <div class="actions">
-        <button onclick={run} disabled={busy}>{busy ? "Running lifecycle" : "Run MCP Lifecycle"}</button>
+        <button onclick={run} disabled={busy}>{busy ? "Agent working…" : "Ask the Agent"}</button>
         <button class="secondary" onclick={reset} disabled={busy && events.length === 0}>Reset</button>
       </div>
 
@@ -245,7 +247,7 @@
     </summary>
 
     <div class="steps">
-        {#each ["connect", "discover", "call"] as step}
+        {#each ["connect", "discover", "decide", "call"] as step}
           {@const event = latest(step as StepName)}
           <article class:active={event?.status === "start"} class:ok={event?.status === "ok"} class:failed={event?.status === "error"}>
             <strong>{step}</strong>
@@ -271,8 +273,8 @@
 
       {#if discoveredTools.length > 0}
         <div class="tool-list" class:collapsed={!showTools}>
-          {#each showTools ? discoveredTools : discoveredTools.filter((tool) => tool.relevant || tool.name === selectedTool?.toolName) as tool}
-            <article class:relevant={tool.relevant} class:selected={tool.name === selectedTool?.toolName}>
+          {#each showTools ? discoveredTools : discoveredTools.filter((tool) => tool.relevant || tool.name === agentDecision?.toolName) as tool}
+            <article class:relevant={tool.relevant} class:selected={tool.name === agentDecision?.toolName}>
               <strong>{tool.name}</strong>
               <p>{tool.description || "No description provided."}</p>
             </article>
@@ -288,18 +290,22 @@
 
   <details class="panel" open>
     <summary class="panel-title">
-        <h2>Selected Call</h2>
-        <span>{selectedTool?.toolName ?? "not selected"}</span>
+        <h2>Agent Decision</h2>
+        <span>{agentDecision ? (agentDecision.source === "model" ? "model-chosen" : "fallback") : "not decided"}</span>
     </summary>
 
-      {#if selectedTool}
+      {#if agentDecision}
         <div class="call-card">
-          <strong>{selectedTool.toolName}</strong>
-          <p>{selectedTool.reason}</p>
-          <pre>{json(selectedTool.args)}</pre>
+          <div class="decision-head">
+            <strong>{agentDecision.toolName}</strong>
+            <span class="src {agentDecision.source}">{agentDecision.source === "model" ? `chosen by ${agentDecision.model ?? "model"}` : "deterministic fallback"}</span>
+          </div>
+          <p class="thought">{agentDecision.thought}</p>
+          <span class="args-label">arguments the agent built from the request</span>
+          <pre>{json(agentDecision.args)}</pre>
         </div>
       {:else}
-        <p class="empty">The harness selects the GTI tool after discovery.</p>
+        <p class="empty">After discovery, the agent reads the tool list and chooses one — its reasoning and arguments appear here.</p>
       {/if}
   </details>
 
@@ -313,7 +319,7 @@
         {@const attributes = resultAttributes()}
         {@const stats = resultStats()}
         <div class="summary">
-          <strong>{String(asRecord(parsedJson)?.type ?? selectedTool?.indicatorType ?? "GTI result")}</strong>
+          <strong>{String(asRecord(parsedJson)?.type ?? agentDecision?.toolName ?? "GTI result")}</strong>
           {#if attributes}
             <p>Reputation: {String(attributes.reputation ?? "n/a")}</p>
             <p>Country: {String(attributes.country ?? attributes.continent ?? "n/a")}</p>
@@ -438,7 +444,9 @@
             wrote, living inside the harness. Here the harness reaches a tool server it did
             <strong>not</strong> write — Google's Threat Intelligence server — using
             <strong>MCP</strong>, the open protocol for plugging external tools into agents.
-            This is a real, live connection (it needs a VirusTotal key and <code>uv</code>).
+            You ask in plain language; the agent <strong>discovers</strong> what the server offers
+            and <strong>chooses</strong> the right tool itself. It's a real, live connection (it needs
+            a VirusTotal key and <code>uv</code>) backed by a real model call.
           </p>
           <div class="cv-mental-model">
             <PlugsConnectedIcon size={20} weight="duotone" />
@@ -447,8 +455,11 @@
             <MagnifyingGlassIcon size={20} weight="duotone" />
             <span>discover tools</span>
             <span class="cv-mm-sep">→</span>
+            <RobotIcon size={20} weight="duotone" />
+            <span>agent decides</span>
+            <span class="cv-mm-sep">→</span>
             <LightningIcon size={20} weight="duotone" />
-            <span>call one</span>
+            <span>call it</span>
           </div>
         </header>
 
@@ -456,16 +467,16 @@
         <details class="cv-section" open>
           <summary class="cv-h3"><span class="cv-num">A</span> The journey of one lookup<span class="cv-chev" aria-hidden="true">▸</span></summary>
           <p class="cv-lead">
-            Follow one indicator — an IP, domain, or URL — from the box to a live Google
-            Threat Intelligence result. Every step emits an event you see in the lifecycle panel.
+            Follow one plain-language request — "look up this IP on VT" — from the box to a live
+            Google Threat Intelligence result. Every step emits an event you see in the lifecycle panel.
           </p>
 
           <ol class="flow">
             <li class="flow-step" style="--d: 0ms">
               <span class="flow-rail"><CursorClickIcon size={22} weight="duotone" /></span>
               <div class="flow-body">
-                <div class="flow-top"><span class="flow-title">You enter an indicator</span><span class="flow-where">browser</span></div>
-                <p>An IP, domain, URL, or free-text query is posted to the server, which kicks off the MCP lifecycle.</p>
+                <div class="flow-top"><span class="flow-title">You ask in plain language</span><span class="flow-where">browser</span></div>
+                <p>A natural-language request (e.g. "is google.com flagged?") is posted to the server, which kicks off the MCP lifecycle.</p>
               </div>
             </li>
             <li class="flow-step" style="--d: 90ms">
@@ -479,21 +490,28 @@
               <span class="flow-rail"><MagnifyingGlassIcon size={22} weight="duotone" /></span>
               <div class="flow-body">
                 <div class="flow-top"><span class="flow-title">Discover — ask what it can do</span><span class="flow-where">server · mcp.ts</span></div>
-                <p><code>listTools()</code> asks the server to describe its own tools. Nothing is hardcoded — the harness learns the catalog at runtime, then marks the four GTI tools it cares about.</p>
+                <p><code>listTools()</code> asks the server to describe its own tools, with input schemas. Nothing is hardcoded — the harness learns the catalog at runtime and hands the whole list to the agent.</p>
               </div>
             </li>
             <li class="flow-step" style="--d: 270ms">
-              <span class="flow-rail"><LightningIcon size={22} weight="duotone" /></span>
+              <span class="flow-rail"><RobotIcon size={22} weight="duotone" /></span>
               <div class="flow-body">
-                <div class="flow-top"><span class="flow-title">Call — pick a tool and run it</span><span class="flow-where">server · mcp.ts</span></div>
-                <p><code>selectGtiTool()</code> chooses the right tool from the indicator's shape, then <code>callTool()</code> makes the live request to Google Threat Intelligence and returns the report.</p>
+                <div class="flow-top"><span class="flow-title">Decide — the agent chooses a tool</span><span class="flow-badge">real model call</span><span class="flow-where">server · mcp.ts → providers/*</span></div>
+                <p>The discovered tools and your request go to the model, which returns a JSON decision — which tool to call and the arguments to build from the request. If no model is configured, a deterministic rule is the fallback.</p>
               </div>
             </li>
             <li class="flow-step" style="--d: 360ms">
+              <span class="flow-rail"><LightningIcon size={22} weight="duotone" /></span>
+              <div class="flow-body">
+                <div class="flow-top"><span class="flow-title">Call — run the chosen tool</span><span class="flow-where">server · mcp.ts</span></div>
+                <p><code>callTool()</code> invokes the agent's chosen tool with its arguments, making the live request to Google Threat Intelligence and returning the report.</p>
+              </div>
+            </li>
+            <li class="flow-step" style="--d: 450ms">
               <span class="flow-rail"><CheckCircleIcon size={22} weight="duotone" /></span>
               <div class="flow-body">
                 <div class="flow-top"><span class="flow-title">Done — parse and close</span><span class="flow-where">server → browser</span></div>
-                <p>The text result is parsed, the connection is closed, and every lifecycle event (connect / discover / call / done) is streamed to the panels you saw.</p>
+                <p>The text result is parsed, the connection is closed, and every lifecycle event (connect / discover / decide / call / done) is streamed to the panels you saw.</p>
               </div>
             </li>
           </ol>
@@ -541,10 +559,21 @@
 
         <!-- C · Discovery & selection -->
         <details class="cv-section" open>
-          <summary class="cv-h3"><span class="cv-num">C</span> Discovery &amp; tool selection<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <summary class="cv-h3"><span class="cv-num">C</span> How the agent chooses<span class="cv-chev" aria-hidden="true">▸</span></summary>
           <p class="cv-lead">
-            The server advertises many tools; the harness flags four as relevant, then picks one
-            by the shape of your indicator — deterministic code, no model call in this lab.
+            The discovered tools — names, descriptions, and input schemas — plus your request are sent
+            to the model. It replies with a JSON decision: which tool to call and the arguments to
+            build from the request.
+          </p>
+          <pre class="cv-code"><code>&#123;
+  "thought": "the request names an IP, so the IP report tool fits",
+  "tool": "get_ip_address_report",
+  "args": &#123; "ip_address": "185.225.73.217" &#125;
+&#125;</code></pre>
+          <p class="cv-note">
+            The harness checks the chosen tool actually exists in the discovered set, then calls it —
+            so the agent can't invent a tool. If no model is configured (or it returns something
+            unusable), it falls back to a deterministic rule on the indicator's shape:
           </p>
           <div class="sel-table">
             <div class="sel-row"><span class="sel-when">contains <code>://</code></span><ArrowRightIcon size={14} weight="bold" /><code class="sel-tool">get_url_report</code></div>
@@ -571,8 +600,8 @@
               <p>The server is spawned as a subprocess and spoken to over stdio (JSON-RPC on stdin/stdout). It can be written in any language — here it's Python, launched with <code>uv</code>.</p>
             </article>
             <article class="cv-card">
-              <div class="cv-card-head"><ScalesIcon size={26} weight="duotone" /><h4>The indicator picks the tool</h4></div>
-              <p>This lab is about the connection plumbing, so the tool is chosen by deterministic rules on the indicator's shape — not by the model. Later labs let the agent decide.</p>
+              <div class="cv-card-head"><RobotIcon size={26} weight="duotone" /><h4>The agent picks the tool</h4></div>
+              <p>The model reads the discovered tools and decides which to call and how — the same think-act pattern as Lab 04, but over tools it found at runtime. A deterministic rule is only the fallback if no model is available.</p>
             </article>
           </div>
         </details>
@@ -587,7 +616,7 @@
 │  ├─ <span class="tr-dir">routes/lab/05/api/mcp/</span>
 │  │  └─ <span class="tr-file">+server.ts</span>          <span class="tr-cm">← endpoint; streams the lifecycle events</span>
 │  └─ <span class="tr-dir">framework/</span>
-│     └─ <span class="tr-file">mcp.ts</span>              <span class="tr-cm">← connect · listTools · selectGtiTool · callTool</span>
+│     └─ <span class="tr-file">mcp.ts</span>              <span class="tr-cm">← connect · listTools · agent decides · callTool</span>
 │
 └─ <span class="tr-dir">mcp-security/</span>             <span class="tr-cm">← Google's GTI MCP server, vendored</span>
    └─ <span class="tr-dir">server/gti/</span>           <span class="tr-cm">← spawned as a subprocess (uv run server.py)</span></code></pre>
@@ -714,6 +743,39 @@
   .call-card {
     display: grid;
     gap: .75rem;
+  }
+  .decision-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .6rem;
+  }
+  .decision-head .src {
+    font-family: var(--font-heading);
+    font-size: .72rem;
+    border-radius: 999px;
+    padding: .12rem .6rem;
+  }
+  .decision-head .src.model {
+    color: var(--dracula-green, #50fa7b);
+    border: 1px solid rgba(80, 250, 123, .4);
+    background: rgba(80, 250, 123, .08);
+  }
+  .decision-head .src.fallback {
+    color: var(--brand-yellow, #f5e663);
+    border: 1px solid rgba(245, 230, 99, .4);
+    background: rgba(245, 230, 99, .08);
+  }
+  .call-card .thought {
+    color: var(--dracula-fg, rgba(255,255,255,.85));
+    line-height: 1.55;
+  }
+  .call-card .args-label {
+    font-family: var(--font-heading);
+    font-size: .72rem;
+    color: var(--brand-purple-light, #bd93f9);
+    text-transform: uppercase;
+    letter-spacing: .04em;
   }
 
   label {
@@ -1211,6 +1273,27 @@
     color: #aeaebe;
     font-size: 0.9rem;
     line-height: 1.65;
+  }
+
+  .cv-code {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+    color: #d6d6e2;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .cv-code code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
   }
 
   .cv-tree {
