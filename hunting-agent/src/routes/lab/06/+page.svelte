@@ -124,7 +124,7 @@
   const hasExecution = $derived(Boolean(executedSkill));
   const findingBlocks = $derived(findingText ? parseMarkdown(findingText) : []);
 
-  const LAB05_HANDOFF_KEY = "antisiphon.lab05.detectionFinding";
+  const LAB06_HANDOFF_KEY = "antisiphon.lab06.detectionFinding";
 
   const detectionSkills = $derived(skills.filter((skill) => skill.metadata.layer === "detection"));
   const selectedDetectionSkill = $derived(
@@ -282,10 +282,10 @@
     };
 
     localStorage.setItem(
-      LAB05_HANDOFF_KEY,
+      LAB06_HANDOFF_KEY,
       JSON.stringify({
         version: 1,
-        source: "lab05",
+        source: "lab06",
         generatedAt: new Date().toISOString(),
         execution: {
           skill: executedSkill,

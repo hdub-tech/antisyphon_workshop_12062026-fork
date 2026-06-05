@@ -109,7 +109,7 @@
 
   type DetectionHandoff = {
     version: number;
-    source: "lab05" | "lab06-fallback";
+    source: "lab06" | "lab06-fallback";
     generatedAt: string;
     execution: DetectionExecution;
     finding: Record<string, unknown>;
@@ -154,10 +154,10 @@
     | { type: "error"; message: string };
 
 
-  const LAB05_HANDOFF_KEY = "antisiphon.lab05.detectionFinding";
+  const LAB06_HANDOFF_KEY = "antisiphon.lab06.detectionFinding";
   const FALLBACK_DETECTION_SKILL = "skills/detection/hunt-c2-over-https.md";
 
-  let activeTab = $state<"lab" | "code">("lab");
+  let activeTab = $state<"lab" | "handoff" | "code">("lab");
   let skills = $state<SkillSummary[]>([]);
   let schemaContext = $state<ResolvedContext | null>(null);
   let detectionFinding = $state<Record<string, unknown> | null>(null);
@@ -220,7 +220,7 @@
     const stored = readStoredHandoff();
     if (stored) {
       detectionFinding = stored.finding;
-      detectionSource = stored.source === "lab05"
+      detectionSource = stored.source === "lab06"
         ? `Loaded from Lab 06 handoff (${stored.generatedAt})`
         : `Loaded generated fallback (${stored.generatedAt})`;
       return;
@@ -233,14 +233,14 @@
 
   function readStoredHandoff(): DetectionHandoff | null {
     if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(LAB05_HANDOFF_KEY);
+    const raw = localStorage.getItem(LAB06_HANDOFF_KEY);
     if (!raw) return null;
 
     try {
       const parsed = JSON.parse(raw) as DetectionHandoff;
       if (parsed?.finding?.kind === "DetectionFinding") return parsed;
     } catch {
-      localStorage.removeItem(LAB05_HANDOFF_KEY);
+      localStorage.removeItem(LAB06_HANDOFF_KEY);
     }
 
     return null;
@@ -346,7 +346,7 @@
 
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(
-        LAB05_HANDOFF_KEY,
+        LAB06_HANDOFF_KEY,
         JSON.stringify({
           version: 1,
           source: "lab06-fallback",
@@ -460,6 +460,7 @@
 
   <div class="tab-bar-top">
     <button class="tab-btn-top" class:active={activeTab === "lab"} onclick={() => (activeTab = "lab")}>Lab</button>
+    <button class="tab-btn-top" class:active={activeTab === "handoff"} onclick={() => (activeTab = "handoff")}>Handoff</button>
     <button class="tab-btn-top" class:active={activeTab === "code"} onclick={() => (activeTab = "code")}>Code</button>
   </div>
 
@@ -618,6 +619,96 @@
       <p class="empty">The trace appears after assessment execution.</p>
     {/if}
   </details>
+  {:else if activeTab === "handoff"}
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- HANDOFF VIEW — where the upstream DetectionFinding   -->
+    <!-- comes from                                           -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="code-view">
+      <div class="code-inner">
+        <header class="cv-hero">
+          <span class="cv-eyebrow">Upstream</span>
+          <h2>Where the detection finding comes from</h2>
+          <p>
+            An assessment skill is <strong>never self-contained</strong> — it judges an upstream
+            <code>DetectionFinding</code> produced by a detection skill. So before this lab can run,
+            it needs a finding to assess. It gets one in two ways, and <strong>both are real</strong>
+            (a genuine detection model call) — never a stub.
+          </p>
+          <div class="cv-mental-model">
+            <ListMagnifyingGlassIcon size={20} weight="duotone" />
+            <span>Lab 06 detection</span>
+            <span class="cv-mm-sep">→</span>
+            <FileTextIcon size={20} weight="duotone" />
+            <span>DetectionFinding</span>
+            <span class="cv-mm-sep">→</span>
+            <ScalesIcon size={20} weight="duotone" />
+            <span>Lab 07 assessment</span>
+          </div>
+        </header>
+
+        <!-- A · Two ways it arrives -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">A</span> Two ways the finding arrives<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <div class="cv-cards">
+            <article class="cv-card">
+              <div class="cv-card-head"><LinkIcon size={26} weight="duotone" /><h4>Path 1 — handoff from Lab 06</h4></div>
+              <p>When you run a detection in <strong>Lab 06</strong>, that page saves the resulting <code>DetectionFinding</code> to the browser (<code>localStorage</code>). Open Lab 07 and it picks that finding up automatically — so you're assessing the <em>exact</em> finding you just produced. This is the real detection → assessment pipeline.</p>
+            </article>
+            <article class="cv-card">
+              <div class="cv-card-head"><RobotIcon size={26} weight="duotone" /><h4>Path 2 — self-contained fallback</h4></div>
+              <p>Open Lab 07 directly (no handoff in storage) and it <strong>runs the Lab 06 detection itself</strong> — it calls the detection endpoint for <code>hunt-c2-over-https</code>, which makes a real model call, and uses that finding. So the lab always has a genuine finding, even standalone.</p>
+            </article>
+          </div>
+          <p class="cv-note">Either way you land on a real <code>DetectionFinding</code> — the assessment never reasons over an invented one.</p>
+        </details>
+
+        <!-- B · What gets handed over -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">B</span> What gets handed over<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <p class="cv-lead">The finding is a structured object. The assessment harness reads specific fields from it to gather evidence:</p>
+          <pre class="cv-code"><code>&#123;
+  <span class="c-key">"kind"</span>: <span class="c-str">"DetectionFinding"</span>,
+  <span class="c-key">"skill"</span>: <span class="c-str">"hunt-c2-over-https"</span>,
+  <span class="c-key">"verdict"</span>: <span class="c-str">"Produced"</span>,
+  <span class="c-key">"compositeScore"</span>: 0.90,
+  <span class="c-key">"candidateId"</span>: <span class="c-str">"BEA-001"</span>,              <span class="c-cm">// → resolve the trigger candidate</span>
+  <span class="c-key">"triggerCandidate"</span>: &#123; <span class="c-key">"id"</span>: <span class="c-str">"BEA-001"</span>, &#8230; &#125;,
+  <span class="c-key">"evidenceRefs"</span>: &#123;
+    <span class="c-key">"relatedCandidateIds"</span>: [<span class="c-str">"TLS-001"</span>, <span class="c-str">"INTEL-001"</span>, <span class="c-str">"DT-001"</span>]  <span class="c-cm">// → pull supporting evidence</span>
+  &#125;,
+  <span class="c-key">"findingText"</span>: <span class="c-str">"## BEA-001 — the model's detection write-up…"</span>  <span class="c-cm">// → read in the prompt</span>
+&#125;</code></pre>
+          <p class="cv-note">The harness uses <code>candidateId</code> / <code>triggerCandidate.id</code> to re-load the candidate, and <code>evidenceRefs.relatedCandidateIds</code> to pull its correlated evidence — then runs the assessment over all of it plus the injected org context.</p>
+        </details>
+
+        <!-- C · Why hand it off -->
+        <details class="cv-section" open>
+          <summary class="cv-h3"><span class="cv-num">C</span> Why a handoff, not a re-run<span class="cv-chev" aria-hidden="true">▸</span></summary>
+          <div class="cv-cards">
+            <article class="cv-card">
+              <div class="cv-card-head"><GitBranchIcon size={26} weight="duotone" /><h4>Separation of layers</h4></div>
+              <p>Detection answers <em>"is this malicious?"</em>. Assessment answers <em>"how severe is it, in our environment?"</em>. They're different jobs with different inputs — so detection runs once, and its finding flows downstream rather than being re-derived.</p>
+            </article>
+            <article class="cv-card">
+              <div class="cv-card-head"><ScalesIcon size={26} weight="duotone" /><h4>The assessment must not re-score</h4></div>
+              <p>The assessment system prompt is explicit: <em>"an upstream detection skill already produced the DetectionFinding — do NOT re-run detection scoring."</em> Its job is the severity/context layer, grounded in the injected org context — not to second-guess the detection.</p>
+            </article>
+          </div>
+        </details>
+
+        <!-- Callout -->
+        <aside class="cv-callout">
+          <LinkIcon size={22} weight="duotone" />
+          <p>
+            <strong>This is the pipeline taking shape.</strong> Detection → assessment is the first link;
+            later labs add the graph, the narrative, and the report. Each layer consumes the previous
+            one's structured output instead of starting over — which is exactly how a real multi-skill
+            agent composes.
+          </p>
+        </aside>
+      </div>
+    </div>
   {:else}
     <!-- ═══════════════════════════════════════════════════ -->
     <!-- CODE VIEW  (architectural reference, non-interactive)-->
@@ -1586,6 +1677,24 @@
     line-height: 1.65;
   }
   .cv-card p:last-child { margin-bottom: 0; }
+
+  .cv-code {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+    color: #d6d6e2;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .cv-code code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+  .cv-code .c-key { color: #8be9fd; }
+  .cv-code .c-str { color: #f1fa8c; }
+  .cv-code .c-cm { color: #6272a4; }
 
   .cv-tree {
     margin: 0;
