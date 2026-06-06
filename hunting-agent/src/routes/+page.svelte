@@ -9,6 +9,7 @@
   import PlugsConnectedIcon from "phosphor-svelte/lib/PlugsConnectedIcon";
   import RobotIcon from "phosphor-svelte/lib/RobotIcon";
   import TargetIcon from "phosphor-svelte/lib/TargetIcon";
+  import TerminalWindowIcon from "phosphor-svelte/lib/TerminalWindowIcon";
   import XLogoIcon from "phosphor-svelte/lib/XLogoIcon";
   import YoutubeLogoIcon from "phosphor-svelte/lib/YoutubeLogoIcon";
 
@@ -55,6 +56,14 @@
       href: "/lab/06",
       icon: TargetIcon,
     },
+    {
+      id: "shell",
+      bonus: true,
+      title: "Bonus — Give the Agent a Shell",
+      description: "Take-home: hand the agent a real command line, gated by a deny / ask / allow policy file. Watch it run commands, and approve the risky ones.",
+      href: "/lab/shell",
+      icon: TerminalWindowIcon,
+    },
   ];
 
   const socialLinks = [
@@ -89,7 +98,7 @@
       {@const Icon = lab.icon}
       <a class="card" href={lab.href}>
         <div class="card-top">
-          <span class="lab-id">Lab {lab.id}</span>
+          <span class="lab-id">{lab.bonus ? "Bonus" : `Lab ${lab.id}`}</span>
           <span class="card-icon" aria-hidden="true">
             <Icon size={34} weight="duotone" />
           </span>
