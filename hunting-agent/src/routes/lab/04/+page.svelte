@@ -437,7 +437,7 @@
                 while you do it — we hand the agent a <strong>toolbox</strong> (six tools, each
                 described) and give it a goal <em>without</em> saying which tool to use. So as you
                 work, also notice whether it <strong>reaches for the right tool</strong> for each
-                question. Both matter: the answer it reaches <em>and</em> how it got there.
+                question.
               </p>
             </header>
 
@@ -451,10 +451,9 @@
                     <span class="flow-where">Available Tools panel</span>
                   </div>
                   <p>
-                    First, expand <strong>Available Tools</strong> below the console. These six —
-                    and <em>only</em> these — are what the agent can reach, each with a one-line
-                    purpose. Read them so you know what a <em>correct</em> choice looks like
-                    before you start asking.
+                    First, expand <strong>Available Tools</strong> below the console. These six are
+                    what the agent can reach, each with a one-line purpose. Read them so you know
+                    what a <em>correct</em> choice looks like before you start asking.
                   </p>
                 </div>
               </li>
@@ -470,9 +469,10 @@
                   <p>
                     Ask real questions about the candidates and read the answers — this is the
                     actual hunt. Phrase requests as <strong>outcomes</strong>, the way you'd brief
-                    a junior analyst, rather than naming a tool. As a bonus, each prompt below
-                    happens to call for a <em>different</em> tool, so you can also predict which
-                    one the agent should reach for:
+                    a junior analyst, rather than naming a tool. The prompts below are just
+                    <strong>suggestions</strong> to get you started — and each happens to call for a
+                    <em>different</em> tool, so you can also predict which one the agent should
+                    reach for:
                   </p>
                   <div class="gd-match">
                     <div class="gd-match-row"><span class="gd-q">"Which beacons scored above 0.8?"</span><span class="gd-tool">query_candidates</span></div>
