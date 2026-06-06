@@ -12,6 +12,8 @@
   import ArrowRightIcon from "phosphor-svelte/lib/ArrowRightIcon";
   import RobotIcon from "phosphor-svelte/lib/RobotIcon";
   import BracketsCurlyIcon from "phosphor-svelte/lib/BracketsCurlyIcon";
+  import ChatCircleTextIcon from "phosphor-svelte/lib/ChatCircleTextIcon";
+  import CodeIcon from "phosphor-svelte/lib/CodeIcon";
 
   type StepName = "connect" | "discover" | "decide" | "call" | "done";
   type StepStatus = "start" | "ok" | "error";
@@ -39,7 +41,7 @@
     model?: string;
   };
 
-  let activeTab = $state<"live" | "code">("live");
+  let activeTab = $state<"instructions" | "live" | "code">("instructions");
   let query = $state("Look up the IP 185.225.73.217 on VirusTotal");
   let events = $state<LifecycleEvent[]>([]);
   let discoveredTools = $state<ToolSummary[]>([]);
@@ -212,11 +214,133 @@
   </header>
 
   <div class="tab-bar">
+    <button class="tab-btn" class:active={activeTab === "instructions"} onclick={() => (activeTab = "instructions")}>Instructions</button>
     <button class="tab-btn" class:active={activeTab === "live"} onclick={() => (activeTab = "live")}>Live</button>
     <button class="tab-btn" class:active={activeTab === "code"} onclick={() => (activeTab = "code")}>Code</button>
   </div>
 
-  {#if activeTab === "live"}
+  {#if activeTab === "instructions"}
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- INSTRUCTIONS VIEW  (the workshop walkthrough)        -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="code-view">
+      <div class="code-inner">
+        <header class="cv-hero">
+          <span class="cv-eyebrow">Lab 05 · Walkthrough</span>
+          <h2>Reach a real external tool over MCP</h2>
+          <p>
+            Until now, every tool the agent used lived inside our own harness. Here it connects
+            to a tool server we <strong>didn't write</strong> — Google Threat Intelligence —
+            using <strong>MCP</strong>, the open protocol for plugging external tools into
+            agents. You ask in plain language; the agent <strong>discovers</strong> what the
+            server offers, <strong>chooses</strong> a tool, and makes a <strong>real, live</strong>
+            lookup. You're watching two things at once: actual threat intel coming back, and the
+            agent wiring itself up to a tool it only learned about at runtime.
+          </p>
+        </header>
+
+        <div class="gd-note">
+          <TerminalWindowIcon size={18} weight="duotone" />
+          <span>
+            <strong>This is the one lab with prerequisites</strong> — it makes a genuine call out
+            to VirusTotal / GTI. You need <code>uv</code> installed and a free
+            <strong>VirusTotal API key</strong> in your <code>.env</code> (<code>VT_APIKEY=…</code>).
+            The first run may pause a few seconds while <code>uv</code> fetches the server's
+            dependencies — that's normal, and only happens once.
+          </span>
+        </div>
+
+        <ol class="flow">
+          <!-- Step 1 -->
+          <li class="flow-step" style="--d: 0ms">
+            <span class="flow-rail"><ChatCircleTextIcon size={22} weight="duotone" /></span>
+            <div class="flow-body">
+              <div class="flow-top">
+                <span class="flow-title">1 · Ask about an indicator, in plain language</span>
+                <span class="flow-where">Live tab · Ask the Agent</span>
+              </div>
+              <p>
+                On the <strong>Live</strong> tab, type what you want to know about an indicator —
+                an IP, a domain, or a file hash. Describe the goal; don't name a GTI tool. The box
+                comes pre-filled with an IP lookup, but these are just <strong>suggestions</strong>
+                (different kinds of indicator tend to pull different GTI tools):
+              </p>
+              <div class="gd-egs">
+                <span class="gd-eg">Look up the IP 185.225.73.217 on VirusTotal.</span>
+                <span class="gd-eg">What's the reputation of the domain malware-traffic-analysis.net?</span>
+                <span class="gd-eg">Is this file hash known-malicious? &lt;sha256&gt;</span>
+              </div>
+            </div>
+          </li>
+
+          <!-- Step 2 -->
+          <li class="flow-step" style="--d: 110ms">
+            <span class="flow-rail"><PlugsConnectedIcon size={22} weight="duotone" /></span>
+            <div class="flow-body">
+              <div class="flow-top">
+                <span class="flow-title">2 · Watch the MCP lifecycle</span>
+                <span class="flow-where">MCP Lifecycle panel</span>
+              </div>
+              <p>
+                Hit <strong>Ask the Agent</strong> and follow the four stages light up:
+                <strong>connect</strong> (handshake with the GTI server), <strong>discover</strong>
+                (<code>listTools()</code> — ask the server what it can do), <strong>decide</strong>
+                (the <em>agent</em> reads that list and picks a tool), and <strong>call</strong>
+                (<code>callTool()</code> runs the live lookup). Only <em>decide</em> is the model
+                thinking — the rest is the protocol.
+              </p>
+            </div>
+          </li>
+
+          <!-- Step 3 -->
+          <li class="flow-step" style="--d: 220ms">
+            <span class="flow-rail"><RobotIcon size={22} weight="duotone" /></span>
+            <div class="flow-body">
+              <div class="flow-top">
+                <span class="flow-title">3 · See what it found, and what it chose</span>
+                <span class="flow-where">Discovered Tools · Agent Decision</span>
+              </div>
+              <p>
+                The <strong>Discovered Tools</strong> panel is the menu the server advertised at
+                runtime — nothing hard-coded on our side. The <strong>Agent Decision</strong>
+                panel shows which tool the model picked, its reasoning, and the exact arguments it
+                passed. This is the same select-the-right-tool skill as Lab 04, but now over a
+                live, third-party tool server.
+              </p>
+            </div>
+          </li>
+
+          <!-- Step 4 -->
+          <li class="flow-step" style="--d: 330ms">
+            <span class="flow-rail"><GlobeHemisphereWestIcon size={22} weight="duotone" /></span>
+            <div class="flow-body">
+              <div class="flow-top">
+                <span class="flow-title">4 · Read the real result</span>
+                <span class="flow-where">Rendered &amp; Raw result panels</span>
+              </div>
+              <p>
+                The <strong>Rendered GTI Result</strong> lays out the intelligence in a readable
+                form; <strong>Raw MCP Result</strong> is the full payload that came back over the
+                wire. This is genuine data from Google Threat Intelligence — reputation, detections,
+                and context you can fold into an investigation.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <aside class="cv-callout">
+          <CodeIcon size={22} weight="duotone" />
+          <p>
+            <strong>Why MCP matters:</strong> it's the standard way to give an agent tools it
+            wasn't shipped with — discovered and called at runtime, not baked in. That's how a
+            hunting agent plugs into threat-intel feeds, EDRs, and ticketing without custom glue
+            for each one. The optional <strong>Code</strong> tab walks the connect → discover →
+            decide → call wiring.
+          </p>
+        </aside>
+      </div>
+    </div>
+  {:else if activeTab === "live"}
   <details class="panel" open>
     <summary class="panel-title">
         <h2>Ask the Agent</h2>
@@ -1335,6 +1459,37 @@
     color: #c2c2d2;
     font-size: 0.92rem;
     line-height: 1.7;
+  }
+
+  /* Instructions-specific bits */
+  .gd-note {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    margin-top: 1.4rem;
+    padding: 0.75rem 0.95rem;
+    border: 1px solid rgba(245, 230, 99, 0.28);
+    border-left: 3px solid #f5e663;
+    border-radius: 6px;
+    background: rgba(245, 230, 99, 0.05);
+  }
+  .gd-note :global(svg) { color: #f5e663; flex-shrink: 0; margin-top: 1px; }
+  .gd-note span { color: #c2c2d2; font-size: 0.88rem; line-height: 1.65; }
+
+  .gd-egs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+  }
+  .gd-eg {
+    align-self: flex-start;
+    font-size: 0.84rem;
+    color: #d0d0da;
+    background: rgba(80, 250, 123, 0.07);
+    border: 1px solid rgba(80, 250, 123, 0.22);
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
   }
 
   @keyframes cvRise {
