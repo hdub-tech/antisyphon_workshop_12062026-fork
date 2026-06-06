@@ -3,6 +3,7 @@
   import BrainIcon from "phosphor-svelte/lib/BrainIcon";
   import ChartBarIcon from "phosphor-svelte/lib/ChartBarIcon";
   import ChatCircleTextIcon from "phosphor-svelte/lib/ChatCircleTextIcon";
+  import CompassIcon from "phosphor-svelte/lib/CompassIcon";
   import GithubLogoIcon from "phosphor-svelte/lib/GithubLogoIcon";
   import HouseIcon from "phosphor-svelte/lib/HouseIcon";
   import LinkedinLogoIcon from "phosphor-svelte/lib/LinkedinLogoIcon";
@@ -63,6 +64,14 @@
       description: "Take-home: hand the agent a real command line, gated by a deny / ask / allow policy file. Watch it run commands, and approve the risky ones.",
       href: "/lab/shell",
       icon: TerminalWindowIcon,
+    },
+    {
+      id: "further-learning",
+      bonus: true,
+      title: "Bonus — Further Learning",
+      description: "Where to take this next: extension paths, a production checklist, and recommended reading to keep going after the workshop.",
+      href: "/lab/further-learning",
+      icon: CompassIcon,
     },
   ];
 
