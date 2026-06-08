@@ -13,7 +13,6 @@
   import RobotIcon from "phosphor-svelte/lib/RobotIcon";
   import BracketsCurlyIcon from "phosphor-svelte/lib/BracketsCurlyIcon";
   import ChatCircleTextIcon from "phosphor-svelte/lib/ChatCircleTextIcon";
-  import CodeIcon from "phosphor-svelte/lib/CodeIcon";
 
   type StepName = "connect" | "discover" | "decide" | "call" | "done";
   type StepStatus = "start" | "ok" | "error";
@@ -340,16 +339,6 @@
           </li>
         </ol>
 
-        <aside class="cv-callout">
-          <CodeIcon size={22} weight="duotone" />
-          <p>
-            <strong>Why MCP matters:</strong> it's the standard way to give an agent tools it
-            wasn't shipped with — discovered and called at runtime, not baked in. That's how a
-            hunting agent plugs into threat-intel feeds, EDRs, and ticketing without custom glue
-            for each one. The optional <strong>Code</strong> tab walks the connect → discover →
-            decide → call wiring.
-          </p>
-        </aside>
       </div>
     </div>
   {:else if activeTab === "live"}
