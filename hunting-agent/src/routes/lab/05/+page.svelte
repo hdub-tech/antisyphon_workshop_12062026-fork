@@ -474,7 +474,6 @@
         {#if stats}
           <section class="mini-section src-engines">
             <h3>AV engine detections</h3>
-            <p class="src-note">How many of VirusTotal's ~70 antivirus engines flagged this. The closest thing to a verdict — this is what "known bad" really means.</p>
             <div class="stats large">
               {#each Object.entries(stats) as [name, count]}
                 <span>{name}: {String(count)}</span>
@@ -486,7 +485,6 @@
         {#if community.length > 0}
           <section class="mini-section src-community">
             <h3>Community signals</h3>
-            <p class="src-note">Votes and a reputation score from VirusTotal users — opinions and context, not scans. These can <em>disagree</em> with the engines (e.g. the EICAR test file: engines flag it, the crowd votes it harmless because they know it's safe).</p>
             <div class="field-grid">
               {#each community as field}
                 <article class="field-card">
@@ -1020,14 +1018,6 @@
   }
 
   /* Source split inside the GTI Result card */
-  .src-note {
-    margin: 0;
-    max-width: 74ch;
-    color: var(--brand-muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-  }
-  .src-note :global(em) { color: var(--brand-muted); font-style: italic; }
   .mini-section.src-engines,
   .mini-section.src-community {
     padding-left: 0.85rem;
