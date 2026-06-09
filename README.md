@@ -21,7 +21,6 @@ This 4-hour workshop covers **Labs 01–06**.
 |---|---|
 | `hunting-agent/` | The lab app (SvelteKit). **This is what you run.** |
 | `mcp-security/` | Google's GTI MCP server, vendored — used by the MCP lab. No separate clone needed. |
-| `mini-distillation/` | A bonus take-home CLI. |
 
 ---
 

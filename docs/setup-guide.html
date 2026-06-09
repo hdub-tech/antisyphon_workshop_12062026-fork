@@ -396,18 +396,10 @@ GEMINI_MODEL=gemini-2.5-flash
 
   <!-- ════════════ 8 — BONUS ════════════ -->
   <h2 id="s7"><span class="num">7</span> Optional — bonus take-home</h2>
-  <p class="lead">Two extras you can explore after the workshop. Neither is needed for the core labs.</p>
+  <p class="lead">An optional bonus you can explore after the workshop — not needed for the core labs.</p>
 
   <h3>Give the Agent a Shell (in-app)</h3>
   <p>The <strong>Bonus — Give the Agent a Shell</strong> card on the landing page runs entirely in the app you already have. It executes real commands on your machine, gated by a policy file at <code>hunting-agent/command-policy.json</code> (a <code>deny</code> / <code>ask</code> list you can edit). Read its <em>Lesson</em> and <em>Instructions</em> tabs first — and only run it on a machine you're comfortable with.</p>
-
-  <h3>mini-distillation (command-line)</h3>
-  <p>A standalone CLI that turns raw telemetry into scored candidates. It has its own dependencies (the setup script doesn't touch it), so install once:</p>
-  <pre><code><span class="c"># from the repo root</span>
-<span class="p">$</span> cd mini-distillation
-<span class="p">$</span> npm install
-<span class="p">$</span> npx tsx src/distill.ts score all examples/events.sample.json</code></pre>
-  <p>It writes results to <code>candidates.ndjson</code>. See <code>mini-distillation/README.md</code> and <code>SCHEMA.md</code> for how to read the output and run it on your own data.</p>
 
   <hr/>
 
