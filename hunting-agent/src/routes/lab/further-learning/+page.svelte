@@ -106,8 +106,6 @@
 <svelte:head><title>Bonus | Further Learning</title></svelte:head>
 
 <main class="fl-shell">
-  <a class="home-link" href="/">Labs</a>
-
   <section class="hero">
     <div class="hero-icon" aria-hidden="true">
       <CompassIcon size={44} weight="duotone" />
@@ -214,21 +212,6 @@
       var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-  }
-
-  .home-link {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    z-index: 10;
-    padding: 0.7rem 0.95rem;
-    border: 1px solid var(--line);
-    border-radius: 0.5rem;
-    background: rgba(21, 21, 29, 0.92);
-    color: var(--cyan);
-    font-family: var(--font-heading);
-    font-weight: 800;
-    text-decoration: none;
   }
 
   .hero,
